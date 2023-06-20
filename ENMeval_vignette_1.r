@@ -312,10 +312,221 @@ occs.grp <- sb$foldID[1:nrow(occs)]
 bg.grp <- sb$foldID[(nrow(occs)+1):length(sb$foldID)]
 evalplot.grps(pts = bg, pts.grp = bg.grp, envs = envs.bg)
 
+#Selecting which of these data partitioning methods to use should be based on the research objectives and the characteristics of the study system. Refer to the References and Resources section for studies and resources to consult for more information concerning partitioning for model evaluation.
 
 #### Running ENMeval ####
 # -------------------- #
 
-e.mx.l <- ENMevaluate(occs = occs, envs = envs, bg = bg, 
-                      algorithm = 'maxnet', partitions = 'block', 
+#### --> Initial considerations
+# for maxent models, there are 2 parameters to tune:
+# 1 - the range of regularization multiplier (RM = penalty associated with including variables or their transformations in the model) values - higher RM = a stronger penalty on model complexity and thus result in simpler (flatter) model predictions
+# 2 - the combinations od feature classes (potential shape of the marginal response curves)
+# ==> see references and resources section
+
+#ENMevaluate() builds a separate model for each unique combination of RM values and feature class combinations. For example, the following call will build and evaluate 2 models. One with RM=1 and another with RM=2, both allowing only linear features.
+e.mx.l <- ENMevaluate(occs = occs,
+                      envs = envs,
+                      bg = bg,
+                      algorithm = 'maxnet',
+                      partitions = 'block', 
                       tune.args = list(fc = "L", rm = 1:2))
+e.mx.l
+
+# We may, however, want to compare a wider range of models that can use a wider variety of feature classes and regularization multipliers:
+
+e.mx <- ENMevaluate(occs = occs,
+                    envs = envs,
+                    bg = bg, 
+                    algorithm = 'maxnet', partitions = 'block', 
+                    tune.args = list(fc = c("L","LQ","LQH","H"), rm = 1:5))
+
+e.mx
+
+#We can also calculate one of two niche overlap statistics while running ENMevaluate by setting the arguments overlap=TRUE and overlapStat, which support Moran’s I or Schoener’s D (Warren et al. 2008). Note that you can also calculate this value at a later stage using the separate calc.niche.overlap() function.
+
+overlap <- calc.niche.overlap(e.mx@predictions,
+                              overlapStat = "D")
+
+overlap[1:5,]
+
+#### --> Different parameterizations
+
+# If maxent.jar is installed and rJava loads properly, you can also run Maxent with the original Java software.
+tune.args <- list(fc = c("L", "LQ"), rm = 1:2)
+e.mxjar <- ENMevaluate(occs, envs, bg, algorithm = "maxent.jar", 
+                       tune.args = tune.args, partitions = "block")
+
+# 2. Testing partition: no cross validation statistics calculated; instead, model will be evaluated on a testing dataset that is not used to create the full model.
+e.test <- ENMevaluate(occs,
+                      envs,
+                      bg,
+                      algorithm = "maxnet",
+                      tune.args = tune.args, partitions = "testing",
+                      occs.testing = occs.testing)
+
+# 3. User partitions.
+user.grp <- list(occs.grp = round(runif(nrow(occs), 1, 2)), 
+                 bg.grp = round(runif(nrow(bg), 1, 2)))
+e.user <- ENMevaluate(occs,
+                      envs,
+                      bg,
+                      algorithm = "maxnet",
+                      tune.args = tune.args, partitions = "user",
+                      user.grp = user.grp)
+
+# 4. No partitions: no cross validation statistics calculated, nor any model evaluation on test data.
+e.noCV <- ENMevaluate(occs,
+                      envs,
+                      bg,
+                      algorithm = "maxnet",
+                      tune.args = tune.args, partitions = "none")
+
+# 5. No raster data (a.k.a, samples with data, or SWD): no full model raster predictions created, so will run faster; also, both cbi.train and cbi.val will be calculated on the point data (training and validation background) instead of on the "envs" rasters (default). For this implementation, assigning the categorical variable to factor with the argument "categoricals" is easier, as ENMevaluate() internally assigns the levels based on both occs and bg, avoiding any errors associated with different factor levels when combining data.
+
+occs.z <- cbind(occs,
+                raster::extract(envs, occs))
+bg.z <- cbind(bg,
+              raster::extract(envs, bg))
+e.swd <- ENMevaluate(occs.z,
+                    bg = bg.z,
+                    algorithm = "maxnet",
+                    tune.args = tune.args,
+                    partitions = "block")
+
+e.swd@algorithm
+
+#### --> Exploring the results
+# Now let’s take a look at the output from ENMevaluate(), which is an ENMevaluation object, in more detail (also see ?ENMevaluation).
+
+str(e.mx, max.level = 2)
+
+plot(e.mx@predictions[[1]]) # prediction raster #1
+
+# We can use helper functions to access the slots in the ENMevaluation object.
+# Access algorithm, tuning settings, and partition method information.
+eval.algorithm(e.mx)
+eval.tune.settings(e.mx) %>% head()
+eval.partition.method(e.mx)
+# Results table with summary statistics for cross validation on test data.
+eval.results(e.mx) %>% head()
+# Results table with cross validation statistics for each test partition.
+eval.results.partitions(e.mx) %>% head()
+# List of models with names corresponding to tune.args column label.
+eval.models(e.mx) %>% str(max.level = 1)
+# The "betas" slot in a maxnet model is a named vector of the variable coefficients and what kind they are (in R formula notation).
+# Note that the html file that is created when maxent.jar is run is **not** kept.
+m1.mx <- eval.models(e.mx)[["fc.LQH_rm.1"]]
+m1.mx$betas
+# the enframe function from the tibble package makes this named vector into a more readable table.
+library(tibble)
+enframe(m1.mx$betas)
+# RasterStack of model predictions (for extent of "envs") with names corresponding to tune.args column label.
+eval.predictions(e.mx)
+# Original occurrence data coordinates with associated predictor variable values.
+eval.occs(e.mx) %>% head()
+# Background data coordinates with associated predictor variable values.
+eval.bg(e.mx) %>% head()
+# Partition group assignments for occurrence data.
+eval.occs.grp(e.mx) %>% str()
+# Partition group assignments for background data.
+eval.bg.grp(e.mx) %>% str()
+
+#### --> Vizualizing tuning results
+
+# ENMeval 2.0 has a built-in plotting function (eval.plot) to visualize the results of the different models you tuned in a ggplot. Here, we will plot average validation AUC and omission rates for the models we tuned. The x-axis is the regularization multiplier, and the color of the points and lines represents the feature class.
+evalplot.stats(e = e.mx,
+              stats = "or.mtp",
+              color = "fc",
+              x.var = "rm")
+# We can plot more than one statistic at once with ggplot facetting.
+evalplot.stats(e = e.mx,
+              stats = c("or.mtp", "auc.val"),
+              color = "fc",
+              x.var = "rm")
+# Sometimes the error bars make it hard to visualize the plot, so we can try turning them off.
+evalplot.stats(e = e.mx,
+              stats = c("or.mtp", "auc.val"),
+              color = "fc",
+              x.var = "rm",
+              error.bars = FALSE)
+# We can also fiddle with the dodge argument to jitter the positions of overlapping points.
+evalplot.stats(e = e.mx,
+              stats = c("or.mtp", "auc.val"),
+              color = "fc",
+              x.var = "rm",
+              dodge = 0.5)
+# Finally, we can switch which variables are on the x-axis and which symbolized by color. ENMeval currently only accepts two variables for plotting at a time.
+evalplot.stats(e = e.mx,
+              stats = c("or.mtp", "auc.val"),
+              color = "rm",
+              x.var = "fc",
+              error.bars = FALSE)
+
+#### Model selection ####
+# --------------------- #
+# 2 methods here for selecting models ...
+# 1 - ... without considering cross-validation results using AICc (Warren & Seifert 2011; but see Velasco & González-Salazar 2019)
+# 2 - ... with a sequential method that uses cross-validation results by selecting models with the lowest average test omission rate, and to break ties, with the highest average validation AUC (Radosavljevic & Anderson 2014, Kass et al. 2020)
+
+# Overall results
+res <- eval.results(e.mx)
+# Select the model with delta AICc equal to 0, or the one with the lowest AICc score.
+# In practice, models with delta AICc scores less than 2 are usually considered statistically equivalent.
+opt.aicc <- res %>% filter(delta.AICc == 0)
+opt.aicc
+# This dplyr operation executes the sequential criteria explained above.
+opt.seq <- res %>% 
+  filter(or.10p.avg == min(or.10p.avg)) %>% 
+  filter(auc.val.avg == max(auc.val.avg))
+opt.seq
+
+# Let’s now choose the optimal model settings based on the sequential criteria and examine it.
+# We can select a single model from the ENMevaluation object using the tune.args of our optimal model.
+mod.seq <- eval.models(e.mx)[[opt.seq$tune.args]]
+# Here are the non-zero coefficients in our model.
+mod.seq$betas
+# And these are the marginal response curves for the predictor variables with non-zero coefficients in our model. We define the y-axis to be the cloglog transformation, which is an approximation of occurrence probability (with assumptions) bounded by 0 and 1 (Phillips et al. 2017).
+plot(mod.seq, type = "cloglog")
+
+# The above function plots with graphical customizations to include multiple plots on the same page. 
+# Clear the graphics device to avoid plotting sequential plots with these settings.
+dev.off()
+
+# We can select the model predictions for our optimal model the same way we did for the model object above.
+pred.seq <- eval.predictions(e.mx)[[opt.seq$tune.args]]
+plot(pred.seq)
+
+# We can also plot the binned background points with the occurrence points on top to visualize where the training data is located.
+points(eval.bg(e.mx), pch = 3, col = eval.bg.grp(e.mx), cex = 0.5)
+points(eval.occs(e.mx), pch = 21, bg = eval.occs.grp(e.mx))
+
+# Let us now explore how model complexity changes the predictions in our example. 
+# First, let's examine the non-zero model coefficients in the betas slot. The simpler model has fewer model coefficients.
+mod.simple <- eval.models(e.mx)[['fc.L_rm.5']]
+mod.complex <- eval.models(e.mx)[['fc.LQH_rm.1']]
+mod.simple$betas
+length(mod.simple$betas)
+mod.complex$betas
+length(mod.complex$betas)
+# Next, let's take a look at the marginal response curves.
+# The complex model has marginal responses with more curves (from quadratic terms) and spikes (from hinge terms).
+x11();plot(mod.simple, type = "cloglog")
+x11();plot(mod.complex, type = "cloglog")
+
+# Finally, let's cut the plotting area into two rows to visualize the predictions side-by-side.
+x11();par(mfrow=c(2,1), mar=c(2,1,2,0))
+# The simplest model: linear features only and high regularization.
+plot(eval.predictions(e.mx)[['fc.L_rm.5']],
+    ylim = c(-30,20),
+    xlim = c(-90,-30),
+    legend = FALSE,
+    main = 'L_5 prediction')
+# The most complex model: linear, quadratic, and hinge features with low regularization
+plot(eval.predictions(e.mx)[['fc.LQH_rm.1']],
+    ylim = c(-30,20),
+    xlim = c(-90,-30),
+    legend = FALSE,
+    main = 'LQH_1 prediction')
+
+#### Null models ####
+# ----------------- #
