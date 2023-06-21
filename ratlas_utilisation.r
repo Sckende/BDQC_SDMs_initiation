@@ -53,7 +53,7 @@ dim(obs3)
 emv <- c(
     "Aquila chrysaetos",
     "Catharus bicknelli",
-    "Septophaga cerulea", # no obs in Atlas
+    "Setophaga cerulea", 
     "Ixobrychus exilis",
     "Coturnicops noveboracensis",
     "Nerodia sipedon",
@@ -70,7 +70,6 @@ taxa <- get_taxa(scientific_name = emv)
 taxa$observed_scientific_name
 taxa$id_taxa_obs
 
-# Septophaga & Lampropeltis are missing
 # Nerodia & Gyrinophilus are duplicated
 
 obs <- get_observations(
