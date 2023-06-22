@@ -83,16 +83,41 @@ summary(obs$within_quebec)
 # obs du Qc
 obs_qc <- obs[obs$within_quebec == TRUE,]
 dim(obs_qc)
+table(
+    obs_qc$taxa_valid_scientific_name,
+    useNA = "always"
+    )
 
-t <- cbind(obs_qc$taxa_vernacular_fr,
-obs_qc$geom
+# sf object
+qc_sf <- cbind(
+    obs_qc$taxa_valid_scientific_name,
+    obs_qc$geom
 )
-class(t)
-names(t) <- c("name", "geometry")
+class(qc_sf)
+names(qc_sf) <- c("name", "geometry")
+table(
+    qc_sf$name,
+    useNA = "always"
+)
 
 mapview::mapview(
-    t,
+    qc_sf,
     zcol = "name",
     burst = T
     )
 
+#### Explo origine data ####
+# ------------------------ #
+
+obs_ls <- split(
+    obs_qc,
+    obs_qc$taxa_valid_scientific_name
+)
+str(obs_ls, 2)
+lapply(
+    obs_ls,
+    function(x){
+        #able(x$dataset, useNA = "always")
+        table(x$source, useNA = "always")
+    }
+    )
