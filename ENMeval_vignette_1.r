@@ -34,7 +34,7 @@ envs.files <- list.files(path = paste(system.file(package = 'dismo'),
 
 # Read the raster files into a RasterStack.
 # These variables represent 8 bioclimatic variables and one categorical variable "biome".
-# Find the descriptions of the bioclimatic variables here: 
+# Find the descriptions of the bioclimatic variables here:
 # https://www.worldclim.org/data/bioclim.html
 envs <- raster::stack(envs.files)
 names(envs)
@@ -308,7 +308,7 @@ sb <- blockCV::spatialBlock(speciesData = occsBg.sf,
                             selection = "random") # deprecated function !
 
 # We can pull out the partition information from the SpatialBlock object to assemble occs.grp and bg.grp, which can be used for plotting or as user.grp inputs for ENMevaluate.
-occs.grp <- sb$foldID[1:nrow(occs)]
+occs.grp <- sb$foldID[seq_len(nrow(occs))]
 bg.grp <- sb$foldID[(nrow(occs)+1):length(sb$foldID)]
 evalplot.grps(pts = bg, pts.grp = bg.grp, envs = envs.bg)
 
