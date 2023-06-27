@@ -342,7 +342,7 @@ e.mx <- ENMevaluate(occs = occs,
 
 e.mx
 
-#We can also calculate one of two niche overlap statistics while running ENMevaluate by setting the arguments overlap=TRUE and overlapStat, which support Moran’s I or Schoener’s D (Warren et al. 2008). Note that you can also calculate this value at a later stage using the separate calc.niche.overlap() function.
+# We can also calculate one of two niche overlap statistics while running ENMevaluate by setting the arguments overlap=TRUE and overlapStat, which support Moran’s I or Schoener’s D (Warren et al. 2008). Note that you can also calculate this value at a later stage using the separate calc.niche.overlap() function.
 
 overlap <- calc.niche.overlap(e.mx@predictions,
                               overlapStat = "D")
@@ -494,7 +494,7 @@ dev.off()
 
 # We can select the model predictions for our optimal model the same way we did for the model object above.
 pred.seq <- eval.predictions(e.mx)[[opt.seq$tune.args]]
-plot(pred.seq)
+x11(); plot(pred.seq)
 
 # We can also plot the binned background points with the occurrence points on top to visualize where the training data is located.
 points(eval.bg(e.mx), pch = 3, col = eval.bg.grp(e.mx), cex = 0.5)
