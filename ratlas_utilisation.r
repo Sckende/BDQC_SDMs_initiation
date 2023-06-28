@@ -50,6 +50,9 @@ dim(obs3)
 #### Mammifère ####
 # petit polatouche - Glaucomys volans (QC: susceptible d’être désigné; CA: préoccupante)
 
+library(ratlas)
+library(sf)
+
 emv <- c(
     "Aquila chrysaetos",
     "Catharus bicknelli",
@@ -69,6 +72,7 @@ emv <- c(
 taxa <- get_taxa(scientific_name = emv)
 taxa$observed_scientific_name
 taxa$id_taxa_obs
+taxa$valid_scientific_name
 
 # Nerodia & Gyrinophilus are duplicated
 
@@ -76,6 +80,7 @@ obs <- get_observations(
     id_taxa = taxa$id_taxa_obs
 )
 dim(obs)
+head(obs)
 class(obs)
 names(obs)
 summary(obs$within_quebec)
