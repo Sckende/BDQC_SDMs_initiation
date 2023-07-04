@@ -225,24 +225,132 @@ maxL <- ENMevaluate(
 maxL
 x11(); plot(maxL@predictions)
 
-maxLQ <- ENMevaluate(
-    occs = occs,
-    envs = bioclim_qc,
-    bg = bg,
-    algorithm = 'maxnet',
-    partitions = 'block',
-    tune.args = list(fc = "LQ", rm = 1:2)
-    )
-maxLQ
-plot(maxLQ@predictions)
-class(max)
+# maxLQ <- ENMevaluate(
+#     occs = occs,
+#     envs = bioclim_qc,
+#     bg = bg,
+#     algorithm = 'maxnet',
+#     partitions = 'block',
+#     tune.args = list(fc = "LQ", rm = 1:2)
+#     )
+# maxLQ
+# plot(maxLQ@predictions)
 
-max2 <- ENMevaluate(
-    occs = occs,
-    envs = bioclim_qc,
-    bg = bg,
-    algorithm = 'maxnet',
-    partitions = 'block',
-    tune.args = list(fc = c("L","LQ"),
-    rm = 1:3)
+#### Temporal division ####
+names(obsss)
+table(obsss$year_obs, useNA = "always")
+hist(obsss$year_obs)
+
+# From 1990 to 2020
+aig <- obsss[obsss$year_obs >= 1990, ]
+hist(aig$year_obs)
+
+aig$round_year <- substr(aig$year_obs, 1, 3)
+aig_ls <- split(aig, aig$round_year)
+length(aig_ls)
+
+aig_occs_ls <- lapply(aig_ls, function(x) {
+
+        pts <- st_coordinates(x$geom) # retrieve the coordinates
+        occs <- pts[!duplicated(pts), ] # deletion of duplicated coordinates
+
+        occs <- as.data.frame(occs)
+        names(occs) <- c("lon", "lat")
+        occs
+})
+
+aig_UTM_ls <- lapply(aig_ls, function(x) {
+
+        pts <- st_coordinates(x$geom) # retrieve the coordinates
+        occs <- pts[!duplicated(pts), ] # deletion of duplicated coordinates
+
+        occs <- as.data.frame(occs)
+        names(occs) <- c("lon", "lat")
+
+        occs_sf <- sf::st_as_sf(
+                        occs,
+                        coords = c("lon", "lat"),
+                        crs = terra::crs(bioclim_qc))
+
+        occs_sf_utm <- sf::st_transform(
+                        occs_sf,
+                        st_crs("+init=epsg:2031") # conversion en UTM pour la creation d'un buffer
+)
+})
+
+aig_buf_ls <- lapply(aig_UTM_ls, function(x) {
+        occs.buf <- sf::st_buffer(x, dist = 250000) %>% # 250 km
+                            sf::st_union() %>% 
+                            sf::st_sf() %>%
+                            sf::st_transform(crs = raster::crs(bioclim_qc))
+
+        # Crop environmental rasters to match the study extent
+        envs.bg <- raster::crop(bioclim_qc, occs.buf)
+        # Next, mask the rasters to the shape of the buffers
+        envs.bg <- raster::mask(envs.bg, occs.buf)
+})
+
+bg_199 <- raptr::randomPoints(
+                        aig_buf_ls[[1]][[1]],
+                        n = 5000
+                    ) %>% as.data.frame()
+colnames(bg_199) <- c("lon", "lat")
+
+par(mfrow = c(2, 2));plot(aig_buf_ls[[1]][[1]])
+points(bg_199)
+
+bg_200 <- raptr::randomPoints(
+                        aig_buf_ls[[2]][[1]],
+                        n = 5000
+                    ) %>% as.data.frame()
+colnames(bg_200) <- c("lon", "lat")
+
+plot(aig_buf_ls[[2]][[1]])
+points(bg_200)
+
+bg_201 <- raptr::randomPoints(
+                        aig_buf_ls[[3]][[1]],
+                        n = 5000
+                    ) %>% as.data.frame()
+colnames(bg_201) <- c("lon", "lat")
+
+plot(aig_buf_ls[[3]][[1]])
+points(bg_201)
+
+# Modelling
+
+max199 <- ENMevaluate(
+                occs = aig_occs_ls[["199"]],
+                envs = bioclim_qc,
+                bg = bg_199,
+                algorithm = 'maxnet',
+                partitions = 'block',
+                tune.args = list(fc = "L", rm = 1:2)
     )
+max199
+
+max200 <- ENMevaluate(
+                occs = aig_occs_ls[["200"]],
+                envs = bioclim_qc,
+                bg = bg_200,
+                algorithm = 'maxnet',
+                partitions = 'block',
+                tune.args = list(fc = "L", rm = 1:2)
+    )
+max200
+
+max201 <- ENMevaluate(
+                occs = aig_occs_ls[["201"]],
+                envs = bioclim_qc,
+                bg = bg_201,
+                algorithm = 'maxnet',
+                partitions = 'block',
+                tune.args = list(fc = "L", rm = 1:2)
+    )
+max201
+
+x11(); par(mfrow = c(2, 2))
+plot(max199@predictions[[1]])
+plot(max200@predictions[[1]])
+plot(max201@predictions[[1]])
+
