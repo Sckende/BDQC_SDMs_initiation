@@ -36,6 +36,12 @@ grid_on <- grid_glob[overlay[[1]], ]
 plot(st_geometry(grid_on))
 plot(st_geometry(onUTM), add = T)
 
+on_plot <- function(){
+  plot(grid_on)
+  plot(st_geometry(onUTM), add = T)
+}
+
+
 # random selection of areas - function
 # connectUp <- function(polys, n){
 #     nb = spdep::poly2nb(polys)
@@ -97,11 +103,38 @@ plot(grid_on) # 506 polys
 
 assemb <- readRDS(paste(getwd(), "/ALGO_assemblage.rds", sep = ""))
 
-x11(); plot(grid_on)
-plot(st_geometry(grid_on[assemb$pol_numb, ]),
-                 col = assemb$col,
+x11(); on_plot()
+plot(st_geometry(grid_on[assemb[assemb$species %in% c("spe_C", "spe_D"),]$pol_numb, ]),
+                 col = assemb[assemb$species %in% c("spe_C", "spe_D"),]$col,
                  add = T)
 
+#### creation de la matrice users/items ####
+# la note des items représente le nombre de polygones partagés par espèces,
+# ramené à un % pour normaliser la note
+unique(assemb$species)
+spe_pol_ls <- split(assemb, assemb$species)
+# on_pol <- dim(grid_on)[1]
+mtr_ls <- lapply(spe_pol_ls, function(x) {
+                    id <- unique(x$species)
+                    pol_size <- dim(x)[1]
+                    spe_A <- sum(x$pol_numb %in% spe_pol_ls[["spe_A"]]$pol_numb) * 100 / pol_size
+                    spe_B <- sum(x$pol_numb %in% spe_pol_ls[["spe_B"]]$pol_numb) * 100 / pol_size
+                    spe_C <- sum(x$pol_numb %in% spe_pol_ls[["spe_C"]]$pol_numb) * 100 / pol_size
+                    spe_D <- sum(x$pol_numb %in% spe_pol_ls[["spe_D"]]$pol_numb) * 100 / pol_size
+                    spe_E <- sum(x$pol_numb %in% spe_pol_ls[["spe_E"]]$pol_numb) * 100 / pol_size
+
+                    inf <- data.frame(species = id,
+                                      spe_A = spe_A,
+                                      spe_B = spe_B,
+                                      spe_C = spe_C,
+                                      spe_D = spe_D,
+                                      spe_E = spe_E)
+                    inf
+})
+
+names(mtr_ls) <- NULL
+mtr_UI <- do.call("rbind", mtr_ls)
+mtr_UI
 
 #### see also - Alexandros Karatzoglou & recommender system
 #### see also - https://www.youtube.com/watch?v=G4MBc40rQ2k - simpler method with Python
