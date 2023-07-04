@@ -17,10 +17,10 @@ library(ENMeval)
 #### species data ####
 # ------------------ #
 ## --> DL data 
-taxa <- get_taxa(
-    scientific_name = "Aquila chrysaetos"
-    )
-taxa # 10038
+# taxa <- get_taxa(
+#     scientific_name = "Aquila chrysaetos"
+#     )
+# taxa # 10038
 
 # obs <- get_observations(
 #     id_taxa = 10038
@@ -150,7 +150,7 @@ occs_sf_utm <- sf::st_transform(
 )
 
 # Buffer all occurrences by 500 km (to cconfirm), union the polygons together (for visualization), and convert back to a form that the raster package can use. Finally, we reproject the buffers back to WGS84 (lat/lon).
-occs.buf <- sf::st_buffer(occs_sf_utm, dist = 50000) %>% 
+occs.buf <- sf::st_buffer(occs_sf_utm, dist = 250000) %>% # 250 km
   sf::st_union() %>% 
   sf::st_sf() %>%
   sf::st_transform(crs = raster::crs(bioclim_qc))
@@ -158,3 +158,91 @@ plot(bioclim_qc[[1]], main = names(bioclim_qc)[1])
 points(occs)
 # To add sf objects to a plot, use add = TRUE
 plot(occs.buf, border = "blue", lwd = 3, add = TRUE)
+
+
+# Crop environmental rasters to match the study extent
+envs.bg <- raster::crop(bioclim_qc, occs.buf)
+# Next, mask the rasters to the shape of the buffers
+envs.bg <- raster::mask(envs.bg, occs.buf)
+
+# Temperatures
+plot(envs.bg[[1]], main = names(bioclim_qc)[1])
+points(occs)
+plot(occs.buf, border = "blue", lwd = 3, add = TRUE)
+
+# Precipitations
+plot(envs.bg[[2]], main = names(bioclim_qc)[2])
+points(occs)
+plot(occs.buf, border = "blue", lwd = 3, add = TRUE)
+
+
+# Sample 10,000 random points (or whatever the desired number --> ****)
+# only one per cell without replacement
+
+# bg <- dismo::randomPoints(envs.bg[[9]], n = 10000) %>% as.data.frame()
+bg <- raptr::randomPoints(
+    envs.bg[[1]],
+    n = 10000
+) %>% as.data.frame()
+head(bg)
+colnames(bg) <- colnames(occs)
+
+# Notice how we have pretty good coverage (every cell).
+plot(envs.bg[[1]])
+points(bg, pch = 20, cex = 0.2)
+
+
+#### Partitioning occurences for eval ####
+# -------------------------------------- #
+# allowing cross-validation
+# choice of the partitioning method
+# can be done manually with the partitioning function or automatically in ENMeval()
+
+# for illustration, test of the block method
+block <- get.block(occs, bg, orientation = "lat_lon")
+# Let's make sure that we have an even number of occurrences in each partition.
+table(block$occs.grp)
+# We can plot our partitions on one of our predictor variable rasters to visualize where they fall in space.
+# The ENMeval 2.0 plotting functions use ggplot2 (Wickham 2016)
+evalplot.grps(pts = occs, pts.grp = block$occs.grp, envs = raster(envs.bg[[1]])) + 
+  ggplot2::ggtitle("Spatial block partitions: occurrences")
+
+# PLotting the background shows that the background extent is partitioned in a way that maximizes evenness of points across the four bins, not to maximize evenness of area.
+evalplot.grps(pts = bg, pts.grp = block$bg.grp, envs = raster(envs.bg[[1]])) + 
+  ggplot2::ggtitle("Spatial block partitions: background")
+
+#### Running ENMeval ####
+# --------------------- #
+
+maxL <- ENMevaluate(
+    occs = occs,
+    envs = bioclim_qc,
+    bg = bg,
+    algorithm = 'maxnet',
+    partitions = 'block',
+    tune.args = list(fc = "L", rm = 1:2)
+    )
+maxL
+x11(); plot(maxL@predictions)
+
+maxLQ <- ENMevaluate(
+    occs = occs,
+    envs = bioclim_qc,
+    bg = bg,
+    algorithm = 'maxnet',
+    partitions = 'block',
+    tune.args = list(fc = "LQ", rm = 1:2)
+    )
+maxLQ
+plot(maxLQ@predictions)
+class(max)
+
+max2 <- ENMevaluate(
+    occs = occs,
+    envs = bioclim_qc,
+    bg = bg,
+    algorithm = 'maxnet',
+    partitions = 'block',
+    tune.args = list(fc = c("L","LQ"),
+    rm = 1:3)
+    )
