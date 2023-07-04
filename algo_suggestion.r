@@ -138,3 +138,4 @@ mtr_UI
 
 #### see also - Alexandros Karatzoglou & recommender system
 #### see also - https://www.youtube.com/watch?v=G4MBc40rQ2k - simpler method with Python
+#### see also - https://builtin.com/data-science/collaborative-filtering-recommender-system
