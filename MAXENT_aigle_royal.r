@@ -5,14 +5,8 @@
 
 #### Packages ####
 # ------------- #
-library(ratlas)
-library(raster)
-library(sf)
-library(mapview)
-library(geodata)
-library(geojsonsf)
-library(lubridate)
-library(ENMeval)
+source("/home/claire/BDQC-GEOBON/GITHUB/BDQC_SDMs/packages.r")
+
 
 #### species data ####
 # ------------------ #
@@ -354,3 +348,29 @@ plot(max199@predictions[[1]])
 plot(max200@predictions[[1]])
 plot(max201@predictions[[1]])
 
+x11(); par(mfrow = c(2, 2))
+plot(max199@predictions[[2]])
+plot(max200@predictions[[2]])
+plot(max201@predictions[[2]])
+
+x11(); par(mfrow = c(1, 2))
+plot(max199@predictions[[1]])
+plot(max199@predictions[[2]])
+
+pred_rast <- max199@predictions[[1]]
+pred_modif <- pred_rast
+values(pred_modif)[values(pred_modif) >= 0.5] <- 1
+values(pred_modif)[values(pred_modif) < 0.5] <- 0
+plot(pred_modif)
+
+pred_rast <- max200@predictions[[1]]
+pred_modif <- pred_rast
+values(pred_modif)[values(pred_modif) >= 0.5] <- 1
+values(pred_modif)[values(pred_modif) < 0.5] <- 0
+plot(pred_modif)
+
+pred_rast <- max201@predictions[[1]]
+pred_modif <- pred_rast
+values(pred_modif)[values(pred_modif) >= 0.5] <- 1
+values(pred_modif)[values(pred_modif) < 0.5] <- 0
+plot(pred_modif)

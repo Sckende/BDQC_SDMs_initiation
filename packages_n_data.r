@@ -36,3 +36,10 @@ bioclim_qc <- crop(
     bioclim,
     rang)
 
+# Province limits
+#prov <- gadm(country = "CAN",
+#level = 1,
+#path = ".")
+
+prov <- terra::readRDS("/home/claire/BDQC-GEOBON/data/gadm/gadm41_CAN_1_pk.rds")
+
