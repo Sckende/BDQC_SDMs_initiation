@@ -5,7 +5,7 @@
 
 #### Packages ####
 # ------------- #
-source("/home/claire/BDQC-GEOBON/GITHUB/BDQC_SDMs/packages.r")
+source("/home/claire/BDQC-GEOBON/GITHUB/BDQC_SDMs/packages_n_data.r")
 
 
 #### species data ####
@@ -228,18 +228,44 @@ x11(); plot(maxL@predictions)
 #     tune.args = list(fc = "LQ", rm = 1:2)
 #     )
 # maxLQ
-# plot(maxLQ@predictions)
+# plot(maxLQ@predictions[[1]])
+# plot(maxLQ@predictions[[2]])
 
-#### Temporal division ####
+
+#### Temporal division - 5 ans ####
 names(obsss)
 table(obsss$year_obs, useNA = "always")
 hist(obsss$year_obs)
 
-# From 1990 to 2020
-aig <- obsss[obsss$year_obs >= 1990, ]
+# From 1981 to 2020
+aig <- obsss[obsss$year_obs > 1980, ]
 hist(aig$year_obs)
 
-aig$round_year <- substr(aig$year_obs, 1, 3)
+# Function for rounding years
+round_to_5 <- function(numb) {
+
+new <- vector()
+    
+    for(i in numb){
+    last_val <- as.numeric(substr(i, nchar(i), nchar(i)))
+
+    if(last_val %in% c(0, 5)) {
+        new_val <- i
+    } else if (last_val %in% 1:4) {
+       new_val <- i + (5 - last_val)
+    } else {
+        new_val <- i + (10 - last_val)
+    }
+
+    new_val
+    
+    new <- c(new, new_val)
+    }
+    new
+}
+
+# Data treatment
+aig$round_year <- round_to_5(aig$year_obs)
 aig_ls <- split(aig, aig$round_year)
 length(aig_ls)
 
@@ -284,34 +310,48 @@ aig_buf_ls <- lapply(aig_UTM_ls, function(x) {
         envs.bg <- raster::mask(envs.bg, occs.buf)
 })
 
-bg_199 <- raptr::randomPoints(
-                        aig_buf_ls[[1]][[1]],
+
+# Random points
+
+aig_rand_pts <- list()
+
+for(i in seq_along(aig_buf_ls)) {
+
+    bg <- raptr::randomPoints(
+                        aig_buf_ls[[i]][[1]],
                         n = 5000
                     ) %>% as.data.frame()
-colnames(bg_199) <- c("lon", "lat")
 
-par(mfrow = c(2, 2));plot(aig_buf_ls[[1]][[1]])
-points(bg_199)
+    colnames(bg) <- c("lon", "lat")
 
-bg_200 <- raptr::randomPoints(
-                        aig_buf_ls[[2]][[1]],
-                        n = 5000
-                    ) %>% as.data.frame()
-colnames(bg_200) <- c("lon", "lat")
+    aig_rand_pts[[i]] <- bg
 
-plot(aig_buf_ls[[2]][[1]])
-points(bg_200)
+}
+names(aig_rand_pts) <- names(aig_buf_ls)
 
-bg_201 <- raptr::randomPoints(
-                        aig_buf_ls[[3]][[1]],
-                        n = 5000
-                    ) %>% as.data.frame()
-colnames(bg_201) <- c("lon", "lat")
-
-plot(aig_buf_ls[[3]][[1]])
-points(bg_201)
 
 # Modelling
+
+sdm_aig <- list()
+
+for(i in seq_along(aig_rand_pts)) {
+
+    mod <- ENMevaluate(
+                occs = aig_occs_ls[[i]],
+                envs = bioclim_qc,
+                bg = aig_rand_pts[[i]],
+                algorithm = 'maxnet',
+                partitions = 'block',
+                tune.args = list(fc = "L", rm = 1:2)
+    )
+}
+
+names(sdm_aig) <- names(aig_rand_pts)
+
+
+
+
+
 
 max199 <- ENMevaluate(
                 occs = aig_occs_ls[["199"]],
