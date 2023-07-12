@@ -108,6 +108,10 @@ plot(st_geometry(grid_on[assemb[assemb$species %in% c("spe_C", "spe_D"),]$pol_nu
                  col = assemb[assemb$species %in% c("spe_C", "spe_D"),]$col,
                  add = T)
 
+on_plot()
+plot(st_geometry(grid_on[assemb$pol_numb, ]),
+      col = assemb$col, add = T)
+
 #### creation de la matrice users/items ####
 # la note des items représente le nombre de polygones partagés par espèces,
 # ramené à un % pour normaliser la note
