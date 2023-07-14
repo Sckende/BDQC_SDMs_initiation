@@ -451,3 +451,55 @@ for (i in c(size_niche_4,
                      type = "l",
                      bty = "n"))
             } # fonctionne pas dans la loop mais en manuel oui
+
+
+# -------------- #
+# -------------- #
+# IN TEH FUTURE #
+# -------------- #
+# -------------- #
+
+tif_temp <- list.files("/home/claire/BDQC-GEOBON/data/bioclim_data/QC_Moyenne-annuelle-des-temperatures_spatial",
+                         all.files = TRUE,
+                         full.names = T,
+                         pattern = ".tif")
+
+tif_prec <- list.files("/home/claire/BDQC-GEOBON/data/bioclim_data/QC_Total-annuel-des-precipitations_spatial",
+                         all.files = TRUE,
+                         full.names = T,
+                         pattern = ".tif")
+
+# scenario 2021-2050 - SSP3-7.0 - pecrcentile 50
+scenar <- terra::rast(c(tif_temp[78],
+                        tif_prec[78]))
+
+names(scenar) <- names(bioclim_qc)
+
+prov <- terra::readRDS("/home/claire/BDQC-GEOBON/data/gadm/gadm41_CAN_1_pk.rds")
+
+x11()
+plot(scenar)
+plot(prov, add = T, border = "darkgrey")
+
+summary(values(scenar))
+
+length(aig_5)
+aig_5[[8]]@predictions[[1]]
+pred_test <- dismo::predict(aig_5[[8]], scenar)
+
+
+bioc <- bioclim
+
+bioc_qc <- crop(
+    bioc,
+    ext(scenar)
+)
+
+names(aig_5[[8]]@models)
+str(aig_5[[8]]@models)
+
+# https://www.rdocumentation.org/packages/ENMeval/versions/0.3.1/topics/ENMevaluate
+e <-  ENMevaluate(...)
+e@predictions[[1]]  # raw output
+p <- predict(e@models[[1]], envs)
+p  # logistic output
