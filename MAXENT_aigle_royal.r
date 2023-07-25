@@ -503,3 +503,5 @@ e <-  ENMevaluate(...)
 e@predictions[[1]]  # raw output
 p <- predict(e@models[[1]], envs)
 p  # logistic output
+
+# see also : https://rsh249.github.io/bioinformatics/ENMeval.html

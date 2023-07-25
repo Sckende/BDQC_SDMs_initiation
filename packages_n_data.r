@@ -1,5 +1,7 @@
 #### Packages ####
 # ------------- #
+library(rstac)
+library(gdalcubes)
 library(ratlas)
 library(raster)
 library(sf)
@@ -12,7 +14,6 @@ library(ENMeval)
 #### Functions ####
 
 get_EMV_qc <- function(scientific_name) {
-
     taxa <- get_taxa(scientific_name = scientific_name)
 
     obs <- get_observations(id_taxa = taxa$id_taxa_obs)
@@ -31,15 +32,16 @@ rang <- ext(
     -90,
     -50,
     35,
-    70) # min/max lon, min/max lat - definition of SpatExtent
+    70
+) # min/max lon, min/max lat - definition of SpatExtent
 bioclim_qc <- crop(
     bioclim,
-    rang)
+    rang
+)
 
 # Province limits
-#prov <- gadm(country = "CAN",
-#level = 1,
-#path = ".")
+# prov <- gadm(country = "CAN",
+# level = 1,
+# path = ".")
 
 prov <- terra::readRDS("/home/claire/BDQC-GEOBON/data/gadm/gadm41_CAN_1_pk.rds")
-
