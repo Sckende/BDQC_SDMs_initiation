@@ -10,7 +10,12 @@ library(geodata)
 library(geojsonsf)
 library(lubridate)
 library(ENMeval)
-
+library(tibble)
+library(sp)
+library(dplyr)
+library(rgbif)
+library(tidyr)
+library(stars)
 #### Functions ####
 
 get_EMV_qc <- function(scientific_name) {
