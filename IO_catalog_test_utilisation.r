@@ -21,6 +21,8 @@ stac(stac_path) %>%
     collections() %>%
     get_request() %>%
     print(n = Inf) # to display the complete tibble object
+    get_request() %>%
+    print(n = Inf) # to display complete tibble object
 
 ### 1. Defining the study extent
 
@@ -82,12 +84,14 @@ source("/home/claire/BDQC-GEOBON/GITHUB/BDQC_SDMs/packages_n_data.r")
 s_obj <- stac("https://io.biodiversite-quebec.ca/stac/")
 
 ## List collections ##
+# ------------------ #
 collections <- s_obj %>%
                collections() %>%
                get_request() %>%
                print(n = Inf) # ctrl+shift+m for %>%
 
-##Show collections and descriptions
+## Show collections and descriptions ##
+# ----------------------------------- #
 df <- data.frame(id = character(),
                  title = character(),
                  description = character())
@@ -100,14 +104,20 @@ for (c in collections[['collections']]){
 df 
 
 ## Search for a specific collection ##
+# ---------------------------------- #
 
 it_obj <- s_obj %>%
-  stac_search(collections = "stressors_qc",
+  stac_search(collections = "chelsa-clim",
               limit = 100) %>% # *** see the arguments of this function AND by default, limitations in the number of files send (= 10) => see limit argument
   post_request() %>%
   items_fetch()
 it_obj
 
-it_obj[["features"]][[5]] # 5 for "routes_pres_absence"
-it_obj[["features"]][[10]] # 5 for "crop_norm"
+it_obj[["features"]][[19]]$properties
 
+## Get one item and send it to STARS ##
+# ----------------------------------- #
+
+library(stars) # good complement of TERRA packages for manipulating raster
+lc1 <- read_stars(paste0('/vsicurl/',it_obj[['features']][[4]]$assets$data$href), proxy = TRUE) # by putting "/vsicurl/" and proxy = T it's just using the web, we avoid to read the raster on the computer memory => really faster !
+plot(lc1)
