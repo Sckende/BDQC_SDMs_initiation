@@ -8,13 +8,19 @@
 # ------------- #
 source("/home/claire/BDQC-GEOBON/GITHUB/BDQC_SDMs/packages_n_data.r")
 # devtools::install_github("ReseauBiodiversiteQuebec/stac-catalogue")
+
+
+#### SARAH VIGNETTE ####
+# -------------------- #
+
 library("stacatalogue")
 
 # The STAC currently contains the following collections:
 stac_path <- "https://io.biodiversite-quebec.ca/stac/"
 stac(stac_path) %>%
     collections() %>%
-    get_request()
+    get_request() %>%
+    print(n = Inf) # to display the complete tibble object
 
 ### 1. Defining the study extent
 
@@ -62,3 +68,46 @@ bbox <- stacatalogue::points_to_bbox(obs_pts,
     buffer = buffer
 )
 plot(bbox)
+
+#### GUILLAUME L. METHODE ####
+# -------------------------- #
+
+## Packages ##
+# ---------- #
+source("/home/claire/BDQC-GEOBON/GITHUB/BDQC_SDMs/packages_n_data.r")
+
+## Connect to STAC catalog ##
+# ------------------------- #
+
+s_obj <- stac("https://io.biodiversite-quebec.ca/stac/")
+
+## List collections ##
+collections <- s_obj %>%
+               collections() %>%
+               get_request() %>%
+               print(n = Inf) # ctrl+shift+m for %>%
+
+##Show collections and descriptions
+df <- data.frame(id = character(),
+                 title = character(),
+                 description = character())
+
+for (c in collections[['collections']]){
+              df <- rbind(df,
+                        data.frame(id = c$id,
+                        title = c$title,description = c$description))
+}
+df 
+
+## Search for a specific collection ##
+
+it_obj <- s_obj %>%
+  stac_search(collections = "stressors_qc",
+              limit = 100) %>% # *** see the arguments of this function AND by default, limitations in the number of files send (= 10) => see limit argument
+  post_request() %>%
+  items_fetch()
+it_obj
+
+it_obj[["features"]][[5]] # 5 for "routes_pres_absence"
+it_obj[["features"]][[10]] # 5 for "crop_norm"
+
