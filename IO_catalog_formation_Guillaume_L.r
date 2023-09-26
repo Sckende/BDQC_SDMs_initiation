@@ -85,7 +85,7 @@ cropped <- st_crop(bbox) %>% write_stars('/home/glaroc/lc1.tif', driver = 'COG',
 
 ##This is a fix to add the data role to the assets. This is apparently needed for gdalcubes to work properly in newer versions
 
-for (i in 1:length(it_obj$features)){
+for (i in seq_along(it_obj$features)){
   it_obj$features[[i]]$assets$data$roles = 'data'
 }
 
@@ -140,7 +140,7 @@ v <- cube_view(srs = "EPSG:3116", extent = list(t0 = "2015-01-01", t1 = "2015-01
                dx = 5000, dy = 5000, dt = "P1D",
                aggregation = "mean",
                resampling = "bilinear")
-for (i in 1:length(it_obj$features)){
+for (i in seq_along(it_obj$features)){
   it_obj$features[[i]]$assets$data$roles = 'data'
 } # for fixing the rows properties
 
@@ -158,7 +158,7 @@ lc_cube %>% plot(col=heat.colors)
 ##Use the CHELSA monthly dataset, and create a map of the average for the months on June, July and August from 2010 to 2020
 it_obj <- s_obj %>%
   stac_search(collections = "chelsa-monthly", datetime = "2010-06-01T00:00:00Z/2020-08-01T00:00:00Z",limit = 5000) %>% post_request() %>% items_fetch()
-for (i in 1:length(it_obj$features)){
+for (i in seq_along(it_obj$features)){
   it_obj$features[[i]]$assets[[1]]$roles = 'data'
 }
 
@@ -193,7 +193,7 @@ lc_cube2 %>% reduce_time(c("mean(data)")) %>% plot(col = heat.colors)
 
 it_obj <- s_obj %>%
   stac_search(collections = "esacci-lc", limit = 5000) %>% post_request() %>% items_fetch()
-for (i in 1:length(it_obj$features)){
+for (i in seq_along(it_obj$features)){
   it_obj$features[[i]]$assets[[1]]$roles = 'data'
 }
 
