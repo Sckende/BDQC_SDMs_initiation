@@ -326,13 +326,6 @@ plot(maxLQ@predictions)
 
 
 
-
-
-
-
-
-
-
 #### Temporal division - 5 ans ####
 names(obsss)
 table(obsss$year_obs, useNA = "always")
