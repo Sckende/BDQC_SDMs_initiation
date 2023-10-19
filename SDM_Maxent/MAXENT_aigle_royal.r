@@ -1,5 +1,6 @@
-# Production de SDMs avec maxent sur les donnees d'aigle royal
+# Production de SDMs avec maxent sur les donnees d'aigle royal - Aquila chrysaetos
 # origine des donnees d'occurences - atlas
+# origine des donnees d'occurences - donnees utilisees par Vincent Bellavance dans le cadre de sa maitrise
 # origine des donnees bioclimatiques - WorldClim - https://www.worldclim.org/data/bioclim.html
 # package & methode utilises - ENMeval & maxent - vignette https://jamiemkass.github.io/ENMeval/articles/ENMeval-2.0-vignette.html
 
@@ -62,7 +63,7 @@ pred2
 # )
 
 ## --> data from Vincent Bellavance ms
-obs <- as.data.frame(readRDS("/home/claire/BDQC-GEOBON/data/EMV_occurences/BIRD_aigle_royal_occ.rds")) # obs already during the breeding season
+obs <- as.data.frame(readRDS("/home/claire/BDQC-GEOBON/data/Bellavance_data/sf_converted_occ_pres_only2/aquila_chrysaetos.gpkg")) # obs already during the breeding season
 
 dim(obs)
 class(obs)
@@ -106,7 +107,7 @@ occs_sf <- sf::st_as_sf(
     crs = terra::crs(pred2)
 )
 
-# Buffer all occurrences by xxx km (to cconfirm), union the polygons together (for visualization), and convert back to a form that the raster package can use. Finally, we reproject the buffers back to WGS84 (lat/lon).
+## --> Buffer all occurrences by xxx km (to cconfirm), union the polygons together (for visualization), and convert back to a form that the raster package can use. Finally, we reproject the buffers back to WGS84 (lat/lon).
 occs_buf <- sf::st_buffer(occs_sf, dist = 250) %>% # 250 km
     sf::st_union() %>%
     sf::st_sf() %>%
@@ -117,22 +118,32 @@ plot(pred2[[1]], main = names(pred2)[1])
 points(occs)
 plot(occs_buf, border = "blue", lwd = 3, add = TRUE)
 
+## --> Use extent of occs
 
+range <- st_bbox(occs_sf)
+exten <- ext(
+    range[1],
+    range[3],
+    range[2],
+    range[4]
+)
 # Crop environmental rasters to match the study extent
-envs_bg <- crop(pred2, occs_buf)
+# envs_bg <- crop(pred2, occs_buf)
+envs_bg <- crop(pred2, exten)
+
 # Next, mask the rasters to the shape of the buffers
-envs_bg <- mask(envs_bg, occs_buf)
+# envs_bg <- mask(envs_bg, occs_buf)
 
 # Tests
 # Temperatures
 plot(envs_bg[[1]], main = names(pred2)[1])
 points(occs)
-plot(occs_buf, border = "blue", lwd = 3, add = TRUE)
+# plot(occs_buf, border = "blue", lwd = 3, add = TRUE)
 
 # Precipitations
 plot(envs_bg[[2]], main = names(pred2)[2])
 points(occs)
-plot(occs_buf, border = "blue", lwd = 3, add = TRUE)
+# plot(occs_buf, border = "blue", lwd = 3, add = TRUE)
 
 
 # Sample 10,000 random points (or whatever the desired number --> ****)
@@ -149,7 +160,7 @@ colnames(bg) <- colnames(occs)
 # Visualization
 plot(envs_bg[[1]], main = names(pred2)[1])
 points(occs)
-plot(occs_buf, border = "blue", lwd = 3, add = TRUE)
+# plot(occs_buf, border = "blue", lwd = 3, add = TRUE)
 points(bg, col = "red")
 
 #### Partitioning occurences for eval ####
@@ -184,17 +195,41 @@ maxL <- ENMevaluate(
     tune.args = list(fc = "L", rm = 1:2)
 )
 maxL
-# x11(); plot(maxL@predictions)
+class(maxL)
+# saveRDS(
+#     maxL,
+#     "/home/claire/BDQC-GEOBON/SDM_Maxent_results/aquila_chrysaetos/aquila_chrysaetos_L_1-2_250-buffer.rds"
+# )
+# ---
+# saveRDS(
+#     maxL,
+#     "/home/claire/BDQC-GEOBON/SDM_Maxent_results/aquila_chrysaetos/aquila_chrysaetos_L_1-2_QC-buffer.rds"
+# )
+x11()
+plot(maxL@predictions)
 
-# maxLQ <- ENMevaluate(
-#     occs = occs,
-#     envs = bioclim_qc,
-#     bg = bg,
-#     algorithm = 'maxnet',
-#     partitions = 'block',
-#     tune.args = list(fc = "LQ", rm = 1:2)
-#     )
-# maxLQ
+maxLQ <- ENMevaluate(
+    occs = occs,
+    envs = envs_bg,
+    bg = bg,
+    algorithm = "maxnet",
+    partitions = "block",
+    tune.args = list(fc = "LQ", rm = 1:2)
+)
+maxLQ
+# saveRDS(
+#     maxLQ,
+#     "/home/claire/BDQC-GEOBON/SDM_Maxent_results/aquila_chrysaetos/aquila_chrysaetos_LQ_1-2_250-buffer.rds"
+# )
+# maxLQ <- readRDS("/home/claire/BDQC-GEOBON/SDM_Maxent_results/aquila_chrysaetos/aquila_chrysaetos_LQ_1-2.rds")
+# ---
+# saveRDS(
+#     maxLQ,
+#     "/home/claire/BDQC-GEOBON/SDM_Maxent_results/Aquila_chrysaetos/Aquila_chrysaetos_LQ_1-2_QC-buffer.rds"
+# )
+
+x11()
+plot(maxLQ@predictions)
 # plot(maxLQ@predictions[[1]])
 # plot(maxLQ@predictions[[2]])
 
