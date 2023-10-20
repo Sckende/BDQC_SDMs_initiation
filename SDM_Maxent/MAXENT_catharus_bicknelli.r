@@ -1,4 +1,4 @@
-# Production de SDMs avec maxent sur les donnees du junco ardoisé - Junco hyemalis
+# Production de SDMs avec maxent sur les donnees du grive de Bickenell - Catharus bicknelli
 # origine des donnees d'occurences - donnees utilisees par Vincent Bellavance dans le cadre de sa maitrise
 # origine des donnees bioclimatiques - WorldClim - https://www.worldclim.org/data/bioclim.html
 # package & methode utilises - ENMeval & maxent - vignette https://jamiemkass.github.io/ENMeval/articles/ENMeval-2.0-vignette.html
@@ -23,12 +23,12 @@ pred2
 # ------------------ #
 
 ## --> data from Vincent Bellavance ms
-obs_sf <- st_read("/home/claire/BDQC-GEOBON/data/Bellavance_data/sf_converted_occ_pres_only2/junco_hyemalis.gpkg") # obs already during the breeding season
+obs_sf <- st_read("/home/claire/BDQC-GEOBON/data/Bellavance_data/sf_converted_occ_pres_only2/catharus_bicknelli.gpkg") # obs already during the breeding season
 
-dim(obs)
-class(obs)
-head(obs)
-names(obs)
+dim(obs_sf)
+class(obs_sf)
+head(obs_sf)
+names(obs_sf)
 
 # crs homogenization to raster CRS
 obs_sf2 <- st_transform(obs_sf,
@@ -62,6 +62,7 @@ envs_bg <- crop(pred2, exten)
 
 # Tests
 # Temperatures
+x11()
 plot(envs_bg[[1]], main = names(pred2)[1])
 points(occs)
 
@@ -74,7 +75,7 @@ points(occs)
 
 bg <- raptr::randomPoints(
     envs_bg[[1]],
-    n = 10000
+    n = 5000
 ) %>% as.data.frame()
 head(bg)
 colnames(bg) <- colnames(occs)
@@ -129,7 +130,8 @@ maxL <- ENMevaluate(
     occs = occs,
     envs = envs_bg,
     bg = bg,
-    algorithm = "maxnet",
+    # algorithm = "maxnet",
+    algorithm = "maxent.jar",
     partitions = "block",
     tune.args = list(fc = "L", rm = 1:2)
 )
@@ -137,7 +139,7 @@ maxL
 class(maxL)
 # saveRDS(
 #     maxL,
-#     "/home/claire/BDQC-GEOBON/SDM_Maxent_results/junco_hyemalis/junco_hyemalis_L_1-2_QC-buffer.rds"
+#     "/home/claire/BDQC-GEOBON/SDM_Maxent_results/catharus_bicknelli/catharus_bicknelli_L_1-2_QC-buffer.rds"
 # )
 x11()
 plot(maxL@predictions)
@@ -146,7 +148,8 @@ maxLQ <- ENMevaluate(
     occs = occs,
     envs = envs_bg,
     bg = bg,
-    algorithm = "maxnet",
+    # algorithm = "maxnet",
+    algorithm = "maxent.jar",
     partitions = "block",
     tune.args = list(fc = "LQ", rm = 1:2)
 )
@@ -154,7 +157,7 @@ maxLQ
 
 # saveRDS(
 #     maxLQ,
-#     "/home/claire/BDQC-GEOBON/SDM_Maxent_results/junco_hyemalis/junco_hyemalis_LQ_1-2_QC-buffer.rds"
+#     "/home/claire/BDQC-GEOBON/SDM_Maxent_results/catharus_bicknelli/catharus_bicknelli_LQ_1-2_QC-buffer.rds"
 # )
 
 x11()
