@@ -129,7 +129,8 @@ maxL <- ENMevaluate(
     occs = occs,
     envs = envs_bg,
     bg = bg,
-    algorithm = "maxnet",
+    # algorithm = "maxnet",
+    algorithm = "maxent.jar",
     partitions = "block",
     tune.args = list(fc = "L", rm = 1:2)
 )
@@ -137,7 +138,7 @@ maxL
 class(maxL)
 # saveRDS(
 #     maxL,
-#     "/home/claire/BDQC-GEOBON/SDM_Maxent_results/junco_hyemalis/junco_hyemalis_L_1-2_QC-buffer.rds"
+#     "/home/claire/BDQC-GEOBON/SDM_Maxent_results/junco_hyemalis/junco_hyemalis_L_1-2_QC-buffer_Maxent-jar.rds"
 # )
 x11()
 plot(maxL@predictions)
@@ -146,7 +147,8 @@ maxLQ <- ENMevaluate(
     occs = occs,
     envs = envs_bg,
     bg = bg,
-    algorithm = "maxnet",
+    # algorithm = "maxnet",
+    algorithm = "maxent.jar",
     partitions = "block",
     tune.args = list(fc = "LQ", rm = 1:2)
 )
@@ -154,7 +156,7 @@ maxLQ
 
 # saveRDS(
 #     maxLQ,
-#     "/home/claire/BDQC-GEOBON/SDM_Maxent_results/junco_hyemalis/junco_hyemalis_LQ_1-2_QC-buffer.rds"
+#     "/home/claire/BDQC-GEOBON/SDM_Maxent_results/junco_hyemalis/junco_hyemalis_LQ_1-2_QC-buffer_Maxent-jar.rds"
 # )
 
 x11()
