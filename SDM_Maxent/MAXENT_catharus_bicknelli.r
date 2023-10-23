@@ -49,13 +49,42 @@ names(occs) <- c("lon", "lat")
 
 ## --> Use extent of occs
 
-range <- st_bbox(obs_sf2)
+# range <- st_bbox(obs_sf2)
+# exten <- ext(
+#     range[1],
+#     range[3],
+#     range[2],
+#     range[4]
+# )
+
+## --> Use the extent of Quebec
+# Get QC map ####
+
+# country_codes()[42, ] # Canada -> 42
+
+# can <- geodata::gadm("CAN", level = 1, path = "/home/claire/BDQC-GEOBON/data/")
+# qc <- can[can$NAME_1 == "Québec", ]
+
+can <- readRDS("/home/claire/BDQC-GEOBON/data/gadm/gadm41_CAN_1_pk.rds")
+qc <- can[11, ]
+plot(qc)
+
+# Conversion from sp to sf ####
+# qc_sf <- st_as_sf(qc)
+# crs homogenization to raster CRS
+qc_utm <- st_transform(qc_sf,
+    crs = st_crs(pred2)
+)
+plot(st_geometry(qc_utm))
+# extract the extent
+range <- st_bbox(qc_utm)
 exten <- ext(
     range[1],
     range[3],
     range[2],
     range[4]
 )
+
 # Crop environmental rasters to match the study extent
 # envs_bg <- crop(pred2, occs_buf)
 envs_bg <- crop(pred2, exten)
@@ -64,6 +93,7 @@ envs_bg <- crop(pred2, exten)
 # Temperatures
 x11()
 plot(envs_bg[[1]], main = names(pred2)[1])
+plot(st_geometry(qc_utm), add = T)
 points(occs)
 
 # Precipitations
@@ -73,23 +103,30 @@ points(occs)
 # Sample 10,000 random points (or whatever the desired number --> ****)
 # only one per cell without replacement
 
-bg <- raptr::randomPoints(
-    envs_bg[[1]],
-    n = 5000
-) %>% as.data.frame()
-head(bg)
-colnames(bg) <- colnames(occs)
+# bg <- raptr::randomPoints(
+#     envs_bg[[1]],
+#     n = 5000
+# ) %>% as.data.frame()
+# head(bg)
+# colnames(bg) <- colnames(occs)
 
 # or use of all occurrences in db
-
+# --> convert bbox to poly
+# poly <- st_as_sfc(range)
+# wkt <- st_as_text(poly)
 bg0 <- st_read("/home/claire/BDQC-GEOBON/data/Bellavance_data/total_occ_pres_only_versionR.gpkg",
-    query = "SELECT geom FROM total_occ_pres_only_versionR ORDER BY random() LIMIT 10"
+    query = "SELECT geom FROM total_occ_pres_only_versionR ORDER BY random() LIMIT 50000"
+    # ,
+    # wkt_filter = wkt
 )
 
+bg0 <- st_transform(bg0,
+    crs = st_crs(qc_utm)
+)
 bg00 <- as.data.frame(st_coordinates(bg0))
-
+dim(bg00)
 bg <- bg00[!duplicated(bg00), ]
-
+dim(bg)
 # sample_n(bg, 10)
 colnames(bg) <- colnames(occs)
 
