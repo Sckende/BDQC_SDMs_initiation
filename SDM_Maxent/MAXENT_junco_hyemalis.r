@@ -25,10 +25,10 @@ pred2
 ## --> data from Vincent Bellavance ms
 obs_sf <- st_read("/home/claire/BDQC-GEOBON/data/Bellavance_data/sf_converted_occ_pres_only2/junco_hyemalis.gpkg") # obs already during the breeding season
 
-dim(obs)
-class(obs)
-head(obs)
-names(obs)
+dim(obs_sf)
+class(obs_sf)
+head(obs_sf)
+names(obs_sf)
 
 # crs homogenization to raster CRS
 obs_sf2 <- st_transform(obs_sf,
@@ -48,8 +48,23 @@ names(occs) <- c("lon", "lat")
 # ------------------ #
 
 ## --> Use extent of occs
-
 range <- st_bbox(obs_sf2)
+
+## --> Use extent of QC
+can <- readRDS("/home/claire/BDQC-GEOBON/data/gadm/gadm41_CAN_1_pk.rds")
+qc <- can[11, ]
+plot(qc)
+
+# Conversion from sp to sf ####
+qc_sf <- st_as_sf(qc)
+# crs homogenization to raster CRS
+qc_utm <- st_transform(qc_sf,
+    crs = st_crs(pred2)
+)
+plot(st_geometry(qc_utm))
+range <- st_bbox(qc_utm)
+
+## --> Get the range
 exten <- ext(
     range[1],
     range[3],
@@ -69,17 +84,29 @@ points(occs)
 plot(envs_bg[[2]], main = names(pred2)[2])
 points(occs)
 
+
+#### ----> pseudo-absence without bias ####
 # Sample 10,000 random points (or whatever the desired number --> ****)
 # only one per cell without replacement
 
-bg <- raptr::randomPoints(
-    envs_bg[[1]],
-    n = 10000
-) %>% as.data.frame()
+# From raster to polys
+polys <- as.polygons(envs_bg[[1]])
+bg_pts <- st_sample(st_as_sf(test_poly), 10000)
+
+plot(polys)
+plot(st_geometry(bg_pts), col = "red", add = T)
+
+
+# bg <- raptr::randomPoints(
+#     envs_bg[[1]],
+#     n = 10000
+# ) %>% as.data.frame()
+bg <- as.data.frame(st_coordinates(bg_pts))
 head(bg)
 colnames(bg) <- colnames(occs)
 
-# or use of all occurrences in db
+#### ----> pseudo-absence WITH bias ####
+# sampling in all occurrences in db
 
 bg0 <- st_read("/home/claire/BDQC-GEOBON/data/Bellavance_data/total_occ_pres_only_versionR.gpkg",
     query = "SELECT geom FROM total_occ_pres_only_versionR ORDER BY random() LIMIT 10"
@@ -163,3 +190,22 @@ x11()
 plot(maxLQ@predictions)
 # plot(maxLQ@predictions[[1]])
 # plot(maxLQ@predictions[[2]])
+
+maxLQH <- ENMevaluate(
+    occs = occs,
+    envs = envs_bg,
+    bg = bg,
+    # algorithm = "maxnet",
+    algorithm = "maxent.jar",
+    partitions = "block",
+    tune.args = list(fc = "LQH", rm = 1)
+)
+maxLQH
+
+# saveRDS(
+#     maxLQ,
+#     "/home/claire/BDQC-GEOBON/SDM_Maxent_results/junco_hyemalis/junco_hyemalis_LQ_1-2_QC-buffer_Maxent-jar.rds"
+# )
+
+x11()
+plot(maxLQH@predictions)
