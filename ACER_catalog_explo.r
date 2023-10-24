@@ -46,4 +46,4 @@ tif <- acan$assets$data$href
 lc1 <- stars::read_stars(paste0("/vsicurl/", tif),
     proxy = TRUE
 )
-plot(lc1)
+plot(lc1, axes = T)
