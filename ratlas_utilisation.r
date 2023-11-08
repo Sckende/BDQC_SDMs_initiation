@@ -126,3 +126,81 @@ lapply(
         table(x$source, useNA = "always")
     }
     )
+
+
+
+reg <- get_regions(type = "hex", within_quebec = TRUE, scale = 250)
+
+
+
+
+
+names(reg)
+x11(); plot(reg)
+class(reg)
+st_as_sf(reg, coords = "geometry")
+reg$geom[[1]]
+str(reg$geom)
+
+str(reg)
+reg$geom$crs
+plot(reg$geom$coordinates)
+
+get_observations()
+
+get_taxa(scientific_name = "Antigone canadensis")
+
+
+
+
+#### Atlas local ####
+atlas_local <- function(parquet_file,
+                        tblname = "atlas") {
+  requireNamespace("duckdbfs")
+  atlas <- duckdbfs::open_dataset(parquet_file, tblname = tblname)
+  atlas
+}
+
+
+# libraries
+library(ratlas)
+library(dplyr)
+library(sf)
+
+# Connect to atlas locally
+atlas <- atlas_local(parquet_file = "/home/claire/BDQC-GEOBON/geoparquet-test/atlas.parquet", "atlas") # /home/claire/BDQC-GEOBON/geoparquet-test/atlas.parquet
+
+# Get the polygons of interest (within quebec, scale 250)
+# and convert the object to sf
+regions_id <- ratlas::get_regions(scale = 250, type = "hex", within_quebec = TRUE) |>
+              sf::st_as_sf("geometry")
+
+# Get the observations
+data <- atlas |>
+        filter(valid_scientific_name == "Antigone canadensis") |>
+        collect() |>
+        sf::st_as_sf(coords = c("longitude", "latitude"), crs = 4326) 
+        
+        test <- st_intersection(data, regions_id[1,])
+        test <- st_intersection(data, regions_id[2,])
+
+        for (i in )
+
+        
+        
+        |>
+        sf::st_join(regions_id, join = st_within)
+
+
+x11(); plot(st_geometry(data))
+mapview::mapview(data)
+
+# create square
+s <- rbind(c(1, 1), c(10, 1), c(10, 10), c(1, 10), c(1, 1)) %>% list %>% st_polygon %>% st_sfc
+# create random points
+p <- runif(50, 0, 11) %>% cbind(runif(50, 0, 11)) %>% st_multipoint %>% st_sfc %>% st_cast("POINT")
+
+# intersect points and square with st_intersection
+st_intersection(p, s)
+
+st_as_text(st_geometry(regions_id[1, ]))

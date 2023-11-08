@@ -21,7 +21,7 @@ stac(stac_path) %>%
     collections() %>%
     get_request() %>%
     print(n = Inf) # to display the complete tibble object
-    get_request() %>%
+get_request() %>%
     print(n = Inf) # to display complete tibble object
 
 ### 1. Defining the study extent
@@ -86,31 +86,39 @@ s_obj <- stac("https://io.biodiversite-quebec.ca/stac/")
 ## List collections ##
 # ------------------ #
 collections <- s_obj %>%
-               collections() %>%
-               get_request() %>%
-               print(n = Inf) # ctrl+shift+m for %>%
+    collections() %>%
+    get_request() %>%
+    print(n = Inf) # ctrl+shift+m for %>%
 
 ## Show collections and descriptions ##
 # ----------------------------------- #
-df <- data.frame(id = character(),
-                 title = character(),
-                 description = character())
+df <- data.frame(
+    id = character(),
+    title = character(),
+    description = character()
+)
 
-for (c in collections[['collections']]){
-              df <- rbind(df,
-                        data.frame(id = c$id,
-                        title = c$title,description = c$description))
+for (c in collections[["collections"]]) {
+    df <- rbind(
+        df,
+        data.frame(
+            id = c$id,
+            title = c$title, description = c$description
+        )
+    )
 }
-df 
+df
 
 ## Search for a specific collection ##
 # ---------------------------------- #
 
 it_obj <- s_obj %>%
-  stac_search(collections = "chelsa-clim",
-              limit = 100) %>% # *** see the arguments of this function AND by default, limitations in the number of files send (= 10) => see limit argument
-  post_request() %>%
-  items_fetch()
+    stac_search(
+        collections = "chelsa-clim",
+        limit = 100
+    ) %>% # *** see the arguments of this function AND by default, limitations in the number of files send (= 10) => see limit argument
+    post_request() %>%
+    items_fetch()
 it_obj
 
 it_obj[["features"]][[19]]$properties
@@ -119,5 +127,5 @@ it_obj[["features"]][[19]]$properties
 # ----------------------------------- #
 
 library(stars) # good complement of TERRA packages for manipulating raster
-lc1 <- read_stars(paste0('/vsicurl/',it_obj[['features']][[4]]$assets$data$href), proxy = TRUE) # by putting "/vsicurl/" and proxy = T it's just using the web, we avoid to read the raster on the computer memory => really faster !
+lc1 <- read_stars(paste0("/vsicurl/", it_obj[["features"]][[4]]$assets$data$href), proxy = TRUE) # by putting "/vsicurl/" and proxy = T it's just using the web, we avoid to read the raster on the computer memory => really faster !
 plot(lc1)
