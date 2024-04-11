@@ -1,6 +1,6 @@
 #!/bin/bash
 
-spe=("Abies_balsamea" "Acer_rubrum" "Acer_saccharum" "Betula_alleghaniensis" "Betula_papyrifera" "Fagus_grandifolia" "Larix_laricina" "Picea_glauca" "Picea_mariana" "Picea_rubens" "Pinus_banksiana" "Pinus_resinosa" "Pinus_strobus" "Populus_tremuloides" "Quercus_rubra" "Tsuga_canadensis" "Thuja_occidentalis")
+spe=("abies_balsamea" "acer_rubrum" "acer_saccharum" "betula_alleghaniensis" "betula_papyrifera" "fagus_grandifolia" "larix_laricina" "picea_glauca" "picea_mariana" "picea_rubens" "pinus_banksiana" "pinus_resinosa" "pinus_strobus" "populus_tremuloides" "quercus_rubra" "tsuga_canadensis" "thuja_occidentalis")
 indd=("valid_scientific_name" "geom" "year_obs" "month_obs" "day_obs" "dataset_name")
 
 for species in ${spe[@]};

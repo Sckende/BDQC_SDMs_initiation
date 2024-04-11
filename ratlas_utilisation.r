@@ -166,6 +166,9 @@ library(dplyr)
 library(duckdb)
 library(duckdbfs)
 library(dbplyr)
+library(sf)
+library(mapview)
+library(terra)
 
 base_url <- "https://object-arbutus.cloud.computecanada.ca/bq-io/atlas/parquet/"
 
@@ -247,8 +250,6 @@ View(dataset)
 dim(dataset)
 
 # Conversion to sf object
-library(sf)
-library(mapview)
 tree_sf <- st_as_sf(tree_db,
     coords = c("longitude", "latitude"),
     crs = 4326
@@ -257,7 +258,7 @@ mapview(tree_sf)
 
 # conversion to environmental raster crs ==>
 # Split per species for creating one gpkg per species
-library(terra)
+
 env <- rast("/home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/data/CROPPED_predictors.tif")
 env
 plot(env[[1]])
@@ -279,7 +280,7 @@ new_tree <- st_read("/home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/data/Boulanger
 
 tree_ls <- split(new_tree, new_tree$valid_scientific_name)
 lapply(tree_ls, function(x) {
-    sp <- gsub(" ", "_", unique(x$valid_scientific_name))
+    sp <- gsub(" ", "_", tolower(unique(x$valid_scientific_name)))
     st_write(
         x,
         paste0("/home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/data/Boulanger_tree_species/", sp, ".gpkg"),
@@ -291,4 +292,4 @@ lapply(tree_ls, function(x) {
 system("bash /home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/GITHUB/BDQC_SDMs_initiation/Loop_for_indexation_gpkg.sh")
 
 # Verification des indexations
-system("ogrinfo -sql 'PRAGMA index_list('Acer_saccharum')' /home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/data/Boulanger_tree_species/Acer_saccharum.gpkg")
+system("ogrinfo -sql 'PRAGMA index_list('Acer_saccharum')' /home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/data/Boulanger_tree_species/acer_saccharum.gpkg")
