@@ -271,7 +271,7 @@ plot(tree_sf2, add = T)
 
 # Creation of the geopackage
 st_write(tree_sf2,
-    "/home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/data/Boulanger_tree_species/Boulanger_tree_species.gpkg",
+    "/home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/data/Boulanger_tree_species.gpkg",
     append = T
 )
 
