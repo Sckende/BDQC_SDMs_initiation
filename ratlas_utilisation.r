@@ -4,6 +4,10 @@
 # devtools::install_github("ReseauBiodiversiteQuebec/ratlas")
 # file.edit("~/.Renviron")
 
+# ------------------------------ #
+#### Request to Atlas online ####
+# ---------------------------- #
+
 library(ratlas)
 library(sf)
 
@@ -56,7 +60,7 @@ library(sf)
 emv <- c(
     "Aquila chrysaetos",
     "Catharus bicknelli",
-    "Setophaga cerulea", 
+    "Setophaga cerulea",
     "Ixobrychus exilis",
     "Coturnicops noveboracensis",
     "Nerodia sipedon",
@@ -86,12 +90,12 @@ names(obs)
 summary(obs$within_quebec)
 
 # obs du Qc
-obs_qc <- obs[obs$within_quebec == TRUE,]
+obs_qc <- obs[obs$within_quebec == TRUE, ]
 dim(obs_qc)
 table(
     obs_qc$taxa_valid_scientific_name,
     useNA = "always"
-    )
+)
 
 # sf object
 qc_sf <- cbind(
@@ -109,7 +113,7 @@ mapview::mapview(
     qc_sf,
     zcol = "name",
     burst = T
-    )
+)
 
 #### Explo origine data ####
 # ------------------------ #
@@ -121,11 +125,11 @@ obs_ls <- split(
 str(obs_ls, 2)
 lapply(
     obs_ls,
-    function(x){
-        #able(x$dataset, useNA = "always")
+    function(x) {
+        # able(x$dataset, useNA = "always")
         table(x$source, useNA = "always")
     }
-    )
+)
 
 
 
@@ -136,7 +140,8 @@ reg <- get_regions(type = "hex", within_quebec = TRUE, scale = 250)
 
 
 names(reg)
-x11(); plot(reg)
+x11()
+plot(reg)
 class(reg)
 st_as_sf(reg, coords = "geometry")
 reg$geom[[1]]
@@ -152,55 +157,138 @@ get_taxa(scientific_name = "Antigone canadensis")
 
 
 
+# --------------------------------------- #
+#### Local Atlas in geoparquet format ####
+# ------------------------------------- #
+# cf vignette - https://reseaubiodiversitequebec.github.io/BQ_DOCS/Geoparquet_Atlas_Intro.html
 
-#### Atlas local ####
-atlas_local <- function(parquet_file,
-                        tblname = "atlas") {
-  requireNamespace("duckdbfs")
-  atlas <- duckdbfs::open_dataset(parquet_file, tblname = tblname)
-  atlas
+library(dplyr)
+library(duckdb)
+library(duckdbfs)
+library(dbplyr)
+
+base_url <- "https://object-arbutus.cloud.computecanada.ca/bq-io/atlas/parquet/"
+
+atlas_local <- function(parquet_date, destination_folder, tblname = "atlas") {
+    file_name <- paste0("atlas_public_", parquet_date, ".parquet")
+    url <- paste0(base_url, file_name)
+    dest <- paste0(destination_folder, "/", file_name)
+    download.file(url, dest)
+    requireNamespace("duckdbfs")
+    duckdbfs::open_dataset(dest, tblname = tblname)
 }
 
+atlas_remote <- function(parquet_date, tblname = "atlas") {
+    file_name <- paste0("atlas_public_", parquet_date, ".parquet")
+    requireNamespace("duckdbfs")
+    duckdbfs::open_dataset(paste0(base_url, file_name), tblname = tblname)
+}
 
-# libraries
-library(ratlas)
-library(dplyr)
+atlas_dates <- read.csv(paste0(base_url, "atlas_export_dates.csv"), header = FALSE, col.names = c("dates"))
+
+# download Atlas locally
+# options(timeout=500)
+# atlas <- atlas_local(tail(atlas_dates$dates, n = 1),
+#                      '/home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/')
+
+# Use Atlas locally
+dest <- "/home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/data/atlas_public_2024-04-02.parquet"
+tblname <- "atlas"
+
+# Open the database
+atlas <- duckdbfs::open_dataset(dest, tblname = tblname)
+
+# Subset of species
+tree_spe <- c(
+    "Abies balsamea",
+    "Acer rubrum",
+    "Acer saccharum",
+    "Betula alleghaniensis",
+    "Betula papyrifera",
+    "Fagus grandifolia",
+    "Larix laricina",
+    "Picea glauca",
+    "Picea mariana",
+    "Picea rubens",
+    "Pinus banksiana",
+    "Pinus resinosa",
+    "Pinus strobus",
+    "Populus tremuloides",
+    "Quercus rubra",
+    "Tsuga canadensis",
+    "Thuja occidentalis"
+)
+
+tree_db <- atlas |>
+    filter(valid_scientific_name %in% tree_spe) |>
+    collect()
+class(tree_db)
+names(tree_db)
+unique(tree_db$valid_scientific_name)
+
+tree_db$observation_value <- as.numeric(tree_db$observation_value)
+summary(tree_db$observation_value)
+View(tree_db[tree_db$observation_value > 1000, ])
+
+tree_db |>
+    group_by(valid_scientific_name) |>
+    summarize(abundance = sum(observation_value)) |>
+    arrange(desc(abundance))
+
+tree_db |>
+    group_by(valid_scientific_name) |>
+    summarize(n_row = n()) |>
+    arrange(desc(n_row))
+
+tree_db |>
+    group_by(dataset_name) |>
+    summarize(total = n())
+View(dataset)
+dim(dataset)
+
+# Conversion to sf object
 library(sf)
+library(mapview)
+tree_sf <- st_as_sf(tree_db,
+    coords = c("longitude", "latitude"),
+    crs = 4326
+)
+mapview(tree_sf)
 
-# Connect to atlas locally
-atlas <- atlas_local(parquet_file = "/home/claire/BDQC-GEOBON/geoparquet-test/atlas.parquet", "atlas") # /home/claire/BDQC-GEOBON/geoparquet-test/atlas.parquet
+# conversion to environmental raster crs ==>
+# Split per species for creating one gpkg per species
+library(terra)
+env <- rast("/home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/data/CROPPED_predictors.tif")
+env
+plot(env[[1]])
+st_crs(env) == st_crs(tree_sf)
 
-# Get the polygons of interest (within quebec, scale 250)
-# and convert the object to sf
-regions_id <- ratlas::get_regions(scale = 250, type = "hex", within_quebec = TRUE) |>
-              sf::st_as_sf("geometry")
+tree_sf2 <- st_transform(tree_sf,
+    crs = st_crs(env)
+)
+plot(tree_sf2, add = T)
 
-# Get the observations
-data <- atlas |>
-        filter(valid_scientific_name == "Antigone canadensis") |>
-        collect() |>
-        sf::st_as_sf(coords = c("longitude", "latitude"), crs = 4326) 
-        
-        test <- st_intersection(data, regions_id[1,])
-        test <- st_intersection(data, regions_id[2,])
+# Creation of the geopackage
+st_write(tree_sf2,
+    "/home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/data/Boulanger_tree_species/Boulanger_tree_species.gpkg",
+    append = T
+)
 
-        for (i in )
+# Save one file per species
+new_tree <- st_read("/home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/data/Boulanger_tree_species/Boulanger_tree_species.gpkg")
 
-        
-        
-        |>
-        sf::st_join(regions_id, join = st_within)
+tree_ls <- split(new_tree, new_tree$valid_scientific_name)
+lapply(tree_ls, function(x) {
+    sp <- gsub(" ", "_", unique(x$valid_scientific_name))
+    st_write(
+        x,
+        paste0("/home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/data/Boulanger_tree_species/", sp, ".gpkg"),
+        append = T
+    )
+})
 
+# Index creation for faster queries
+system("bash /home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/GITHUB/BDQC_SDMs_initiation/Loop_for_indexation_gpkg.sh")
 
-x11(); plot(st_geometry(data))
-mapview::mapview(data)
-
-# create square
-s <- rbind(c(1, 1), c(10, 1), c(10, 10), c(1, 10), c(1, 1)) %>% list %>% st_polygon %>% st_sfc
-# create random points
-p <- runif(50, 0, 11) %>% cbind(runif(50, 0, 11)) %>% st_multipoint %>% st_sfc %>% st_cast("POINT")
-
-# intersect points and square with st_intersection
-st_intersection(p, s)
-
-st_as_text(st_geometry(regions_id[1, ]))
+# Verification des indexations
+system("ogrinfo -sql 'PRAGMA index_list('Acer_saccharum')' /home/local/USHERBROOKE/juhc3201/BDQC-GEOBON/data/Boulanger_tree_species/Acer_saccharum.gpkg")
